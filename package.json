@@ -1,10 +1,12 @@
 {
   "name": "cloud-conformity",
-  "version": "1.0.1",
+  "version": "1.0.11",
   "description": "",
-  "main": "cloudconformity.js",
-  "types": "cloudconformity.d.ts",
+  "main": "dist/cloudconformity.js",
+  "types": "dist/cloudconformity.d.ts",
+  "type": "commonjs",
   "scripts": {
+    "prepublish": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
@@ -22,9 +24,10 @@
     "typescript": "^3.7.5"
   },
   "files": [
-    "lib/**/*"
+    "dist/**/*"
   ],
   "dependencies": {
-    "@types/node": "^13.7.0"
+    "@types/node": "^13.7.0",
+    "axios": "^0.19.2"
   }
 }

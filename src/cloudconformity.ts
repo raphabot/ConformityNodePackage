@@ -12,6 +12,29 @@ export class CloudConformity {
   };
 
   // Accounts API
+  
+  public async createAnAccount(name: string, environment: string, roleArn: string, externalId: string, costPackage: boolean, hasRealTimeMonitoring: boolean){
+    const data = {
+      "data": {
+        "type": "account",
+        "attributes": {
+          "name": name,
+          "environment": environment,
+          "access": {
+            "keys": {
+              "roleArn": roleArn,
+              "externalId": externalId
+            }
+          },
+          "costPackage": costPackage,
+          "hasRealTimeMonitoring": hasRealTimeMonitoring
+        }
+      }
+    }
+    console.log(JSON.stringify(data, null, 2));
+    const result = await this.ccRequest("POST", "accounts", data);
+    return result.data.id;
+  }
 
   public async listAllAccounts(){
     return await this.ccRequest("GET", "accounts");
@@ -66,8 +89,9 @@ export class CloudConformity {
     return await this.ccRequest("DELETE", "accounts/" + ccAccountId);
   };
 
-  public async getOrganizationCloudConformityExternalId() {
-    return await this.ccRequest("GET", "organisation/external-id");
+  public async getOrganizationCloudConformityExternalId(): Promise<string> {
+    const result = await this.ccRequest("GET", "organisation/external-id");
+    return result.data.id;
   };
 
 
@@ -92,6 +116,12 @@ export class CloudConformity {
   public async getTheCurrentUser() {
     return await this.ccRequest("GET", "/users/whoami");
   };
+
+  public async getTheCurrentUserEmail(){
+    const user = await this.getTheCurrentUser();
+    console.log(user);
+    return user.data.attributes.email;
+  }
 
   public async getUserDetails(userId: string) {
     return await this.ccRequest("GET", "/users/" + userId);
@@ -177,7 +207,7 @@ export class CloudConformity {
    * @param path path to be appended to CC endpoint
    * @param data Optional parameter with json data to be submitted with the request.
    */
-  private async ccRequest (method: AxiosRequestConfig["method"], path: string, data?: object): Promise<object>{
+  private async ccRequest (method: AxiosRequestConfig["method"], path: string, data?: object): Promise<any>{
     try {
       return this.parseAxiosOutput(await axios(this.generateRequest(method, path, data? data : undefined)));
     } catch (error) {
