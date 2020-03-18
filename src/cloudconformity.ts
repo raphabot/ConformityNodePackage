@@ -97,7 +97,7 @@ export class CloudConformity {
 
   // Template Scanner API
 
-  public async scanACloudFormationTemplate(template:string, type?: string, profileId?: string, accountId?: string) {
+  public async scanACloudFormationTemplate(template: string, type?: string, profileId?: string, accountId?: string) {
     const data = {
       "data": {
         "attributes": {
@@ -108,7 +108,17 @@ export class CloudConformity {
         }
       }
     };
-    return await this.ccRequest("POST", "template-scanner/scan", data)
+    return (await this.ccRequest("POST", "template-scanner/scan", data)).data;
+  }
+
+  public async scanACloudFormationTemplateAndReturAsArrays(template: string, type?: string, profileId?: string, accountId?: string): Promise<{success: [any], failure: [any]}>{
+    const data = await this.scanACloudFormationTemplate(template, type, profileId, accountId);
+    const success = data.filter((entry: any) => entry.attributes.status === "SUCCESS");
+    const failure = data.filter((entry: any) => entry.attributes.status === "FAILURE");
+    return {
+      "success": success,
+      "failure": failure
+    };
   }
 
   // Users API
