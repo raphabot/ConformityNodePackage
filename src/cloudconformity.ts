@@ -80,9 +80,12 @@ export class CloudConformity {
 
   /**
    * @TODO: Implement notes
+   * @param ccAccountId target account id
+   * @param ruleId target rule id
+   * @param notes optional parameter to get notes for the specified rule setting
    */
   public async getRuleSetting(ccAccountId: string, ruleId: string, notes?: boolean){
-    return await this.ccRequest("GET", "accounts/" + ccAccountId + "/settings/rules/" + ruleId);
+    return await this.ccRequest("GET", "accounts/" + ccAccountId + "settings/rules/" + ruleId);
   };
 
   public async deleteAccount(ccAccountId: string) {
@@ -123,13 +126,16 @@ export class CloudConformity {
 
   // Users API
 
+  public async getAllUsers() {
+    return await this.ccRequest("GET", "/users");
+  };
+
   public async getTheCurrentUser() {
     return await this.ccRequest("GET", "/users/whoami");
   };
 
   public async getTheCurrentUserEmail(){
     const user = await this.getTheCurrentUser();
-    console.log(user);
     return user.data.attributes.email;
   }
 
@@ -207,6 +213,13 @@ export class CloudConformity {
   public async deleteCommunicationSetting(communicationId: string){
     return await this.ccRequest("DELETE", "/settings/" + communicationId);
   };
+
+  
+  // // Checks API
+
+  // public async listAllChecks(): Promise<string> {
+  //   return await this.ccRequest("GET", "checks")
+  // };
 
 
   // Private helper functions
