@@ -12,6 +12,29 @@ export class CloudConformity {
   };
 
   // Accounts API
+  
+  public async createAnAccount(name: string, environment: string, roleArn: string, externalId: string, costPackage: boolean, hasRealTimeMonitoring: boolean){
+    const data = {
+      "data": {
+        "type": "account",
+        "attributes": {
+          "name": name,
+          "environment": environment,
+          "access": {
+            "keys": {
+              "roleArn": roleArn,
+              "externalId": externalId
+            }
+          },
+          "costPackage": costPackage,
+          "hasRealTimeMonitoring": hasRealTimeMonitoring
+        }
+      }
+    }
+    console.log(JSON.stringify(data, null, 2));
+    const result = await this.ccRequest("POST", "accounts", data);
+    return result.data.id;
+  }
 
   public async listAllAccounts(){
     return await this.ccRequest("GET", "accounts");
@@ -57,23 +80,27 @@ export class CloudConformity {
 
   /**
    * @TODO: Implement notes
+   * @param ccAccountId target account id
+   * @param ruleId target rule id
+   * @param notes optional parameter to get notes for the specified rule setting
    */
   public async getRuleSetting(ccAccountId: string, ruleId: string, notes?: boolean){
-    return await this.ccRequest("GET", "accounts/" + ccAccountId + "/settings/rules/" + ruleId);
+    return await this.ccRequest("GET", "accounts/" + ccAccountId + "settings/rules/" + ruleId);
   };
 
   public async deleteAccount(ccAccountId: string) {
     return await this.ccRequest("DELETE", "accounts/" + ccAccountId);
   };
 
-  public async getOrganizationCloudConformityExternalId() {
-    return await this.ccRequest("GET", "organisation/external-id");
+  public async getOrganizationCloudConformityExternalId(): Promise<string> {
+    const result = await this.ccRequest("GET", "organisation/external-id");
+    return result.data.id;
   };
 
 
   // Template Scanner API
 
-  public async scanACloudFormationTemplate(template:string, type?: string, profileId?: string, accountId?: string) {
+  public async scanACloudFormationTemplate(template: string, type?: string, profileId?: string, accountId?: string) {
     const data = {
       "data": {
         "attributes": {
@@ -84,14 +111,33 @@ export class CloudConformity {
         }
       }
     };
-    return await this.ccRequest("POST", "template-scanner/scan", data)
+    return (await this.ccRequest("POST", "template-scanner/scan", data)).data;
+  }
+
+  public async scanACloudFormationTemplateAndReturAsArrays(template: string, type?: string, profileId?: string, accountId?: string): Promise<{success: [any], failure: [any]}>{
+    const data = await this.scanACloudFormationTemplate(template, type, profileId, accountId);
+    const success = data.filter((entry: any) => entry.attributes.status === "SUCCESS");
+    const failure = data.filter((entry: any) => entry.attributes.status === "FAILURE");
+    return {
+      "success": success,
+      "failure": failure
+    };
   }
 
   // Users API
 
+  public async getAllUsers() {
+    return await this.ccRequest("GET", "/users");
+  };
+
   public async getTheCurrentUser() {
     return await this.ccRequest("GET", "/users/whoami");
   };
+
+  public async getTheCurrentUserEmail(){
+    const user = await this.getTheCurrentUser();
+    return user.data.attributes.email;
+  }
 
   public async getUserDetails(userId: string) {
     return await this.ccRequest("GET", "/users/" + userId);
@@ -168,6 +214,13 @@ export class CloudConformity {
     return await this.ccRequest("DELETE", "/settings/" + communicationId);
   };
 
+  
+  // // Checks API
+
+  // public async listAllChecks(): Promise<string> {
+  //   return await this.ccRequest("GET", "checks")
+  // };
+
 
   // Private helper functions
 
@@ -177,7 +230,7 @@ export class CloudConformity {
    * @param path path to be appended to CC endpoint
    * @param data Optional parameter with json data to be submitted with the request.
    */
-  private async ccRequest (method: AxiosRequestConfig["method"], path: string, data?: object): Promise<object>{
+  private async ccRequest (method: AxiosRequestConfig["method"], path: string, data?: object): Promise<any>{
     try {
       return this.parseAxiosOutput(await axios(this.generateRequest(method, path, data? data : undefined)));
     } catch (error) {
