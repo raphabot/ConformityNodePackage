@@ -33,7 +33,7 @@ export class CloudConformity {
     }
     console.log(JSON.stringify(data, null, 2));
     const result = await this.ccRequest("POST", "accounts", data);
-    return result.data.id;
+    return result.id;
   }
 
   public async listAllAccounts(){
@@ -94,7 +94,7 @@ export class CloudConformity {
 
   public async getOrganizationCloudConformityExternalId(): Promise<string> {
     const result = await this.ccRequest("GET", "organisation/external-id");
-    return result.data.id;
+    return result.id;
   };
 
 
@@ -111,7 +111,7 @@ export class CloudConformity {
         }
       }
     };
-    return (await this.ccRequest("POST", "template-scanner/scan", data)).data;
+    return (await this.ccRequest("POST", "template-scanner/scan", data));
   }
 
   public async scanACloudFormationTemplateAndReturAsArrays(template: string, type?: string, profileId?: string, accountId?: string): Promise<{success: [any], failure: [any]}>{
@@ -136,7 +136,7 @@ export class CloudConformity {
 
   public async getTheCurrentUserEmail(){
     const user = await this.getTheCurrentUser();
-    return user.data.attributes.email;
+    return user.attributes.email;
   }
 
   public async getUserDetails(userId: string) {
@@ -253,7 +253,7 @@ export class CloudConformity {
   };
 
   private parseAxiosOutput = (axiosOutput: any): object => {
-    return axiosOutput.data;
+    return axiosOutput.data.data;
   };
 
   private async parseAxiosError (error: AxiosResponse["request"]): Promise<object> {
