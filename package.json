@@ -15,7 +15,7 @@
     "prestart": "npm run build"
   },
   "keywords": [],
-  "author": "",
+  "author": "Raphael Bottino",
   "license": "ISC",
   "devDependencies": {
     "prettier": "^1.19.1",
