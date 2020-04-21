@@ -19,15 +19,15 @@
   "license": "ISC",
   "devDependencies": {
     "prettier": "^1.19.1",
-    "tslint": "^6.0.0",
+    "tslint": "^6.1.1",
     "tslint-config-prettier": "^1.18.0",
-    "typescript": "^3.7.5"
+    "typescript": "^3.8.3"
   },
   "files": [
     "dist/**/*"
   ],
   "dependencies": {
-    "@types/node": "^13.7.0",
+    "@types/node": "^13.13.1",
     "axios": "^0.19.2"
   }
 }
