@@ -33,7 +33,7 @@ export class CloudConformity {
     }
     console.log(JSON.stringify(data, null, 2));
     const result = await this.ccRequest("POST", "accounts", data);
-    return result.data.id;
+    return result.id;
   }
 
   public async listAllAccounts(){
@@ -94,7 +94,7 @@ export class CloudConformity {
 
   public async getOrganizationCloudConformityExternalId(): Promise<string> {
     const result = await this.ccRequest("GET", "organisation/external-id");
-    return result.data.id;
+    return result.id;
   };
 
 
@@ -111,7 +111,7 @@ export class CloudConformity {
         }
       }
     };
-    return (await this.ccRequest("POST", "template-scanner/scan", data)).data;
+    return (await this.ccRequest("POST", "template-scanner/scan", data));
   }
 
   public async scanACloudFormationTemplateAndReturAsArrays(template: string, type?: string, profileId?: string, accountId?: string): Promise<{success: [any], failure: [any]}>{
@@ -136,7 +136,7 @@ export class CloudConformity {
 
   public async getTheCurrentUserEmail(){
     const user = await this.getTheCurrentUser();
-    return user.data.attributes.email;
+    return user.attributes.email;
   }
 
   public async getUserDetails(userId: string) {
@@ -213,13 +213,104 @@ export class CloudConformity {
   public async deleteCommunicationSetting(communicationId: string){
     return await this.ccRequest("DELETE", "/settings/" + communicationId);
   };
-
   
+  // Profiles API
+
+  /**
+   * Displays a list of profiles associated to an organisation.
+   */
+  public async listAllProfiles(){
+    return await this.ccRequest("GET", "profiles");
+  }
+
+  /**
+   * Allows you to get the details of the specified profile.
+   * @param profile The Cloud Conformity ID of the profile
+   */
+  public async getProfileAndRuleSettings(profile: string){
+    return await this.ccRequest("GET", "profiles/" + profile);
+  };
+
+  /**
+   * Save a new profile and a batch of configured rule settings upon profile creation
+   * @param profile a JSON object following the Profile GUI standard.
+   */
+  public async saveNewProfileAndRuleSettings(profile: any){
+    return await this.ccRequest("POST", "profiles", this.profileJsonToDataParameter(profile));
+  }
+
+  /**
+   * Converts a profile to the expected POST parameter. 
+   * @param profile a JSON object following the Profile GUI standard.
+   */
+  private profileJsonToDataParameter(profile: any){
+    let dataArray: { type: string; id: any; }[] = [];
+    let includedArray: { type: string; id: any; attributes: { extraSettings: any; enabled: any; exceptions: any; riskLevel: any; }; }[] = [];
+    profile.ruleSettings.map((rule: { id: any; enabled: any; exceptions: any; riskLevel: any; extraSettings?: any; }) => {
+      dataArray.push({
+        type: "rules",
+        id: rule.id
+      });
+      includedArray.push({
+        type: "rules",
+        id: rule.id,
+        attributes: {
+          enabled: rule.enabled,
+          exceptions: rule.exceptions,
+          riskLevel: rule.riskLevel,
+          ...(rule.extraSettings && {extraSettings: rule.extraSettings})
+        },
+      });
+    });
+    return {
+      included: includedArray,
+      data: {
+        type: "profiles",
+        attributes: {
+          name: profile.name,
+          description: profile.description
+        },
+        relationships: {
+          ruleSettings: {
+            "data": dataArray
+          }
+        }
+      }
+    };
+  }
+
+  /**
+   * Allows you to delete a specified profile and all affiliated rule settings.
+   * @param profileId The Cloud Conformity ID of the profile
+   */
+  public async deleteProfileAndRuleSettings(profileId: string){
+    return await this.ccRequest("DELETE", "profiles/" + profileId);
+  }
+
+  /**
+   * Allows you to apply profile and rule settings to a set of accounts under your organisation.
+   * @param profileId The Cloud Conformity ID of the profile
+   * @param mode Mode of how the profile will be applied to the accounts, i.e. "fill-gaps", "overwrite" or "replace".
+   * @param notes Log notes. This field is expected to be filled out, ideally with a reason for the profile being applied.
+   * @param accountIds An Array of account Id's that will be configured by the profile.
+   */
+  public async applyProfileToAccounts(profileId: string, mode: string, notes: string, accountIds: string[]){
+    const data = {
+      meta: {
+        accountIds: accountIds,
+        types: ["rule"],
+        mode: mode,
+        notes: notes,
+      }
+    };
+    return await this.ccRequest("POST", "profiles/" + profileId, data);
+  }
+
   // // Checks API
 
-  // public async listAllChecks(): Promise<string> {
-  //   return await this.ccRequest("GET", "checks")
-  // };
+  public async listAllChecks(): Promise<string> {
+    return await this.ccRequest("GET", "checks")
+  };
 
 
   // Private helper functions
@@ -253,7 +344,7 @@ export class CloudConformity {
   };
 
   private parseAxiosOutput = (axiosOutput: any): object => {
-    return axiosOutput.data;
+    return axiosOutput.data.data;
   };
 
   private async parseAxiosError (error: AxiosResponse["request"]): Promise<object> {
