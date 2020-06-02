@@ -92,8 +92,15 @@ export class CloudConformity {
     return await this.ccRequest("DELETE", "accounts/" + ccAccountId);
   };
 
+  // ExternalID API
+
   public async getOrganizationCloudConformityExternalId(): Promise<string> {
     const result = await this.ccRequest("GET", "organisation/external-id");
+    return result.id;
+  };
+
+  public async createAnExternalId(): Promise<string> {
+    const result = await this.ccRequest("POST", "organisation/external-id");
     return result.id;
   };
 
@@ -114,14 +121,22 @@ export class CloudConformity {
     return (await this.ccRequest("POST", "template-scanner/scan", data));
   }
 
-  public async scanACloudFormationTemplateAndReturAsArrays(template: string, type?: string, profileId?: string, accountId?: string): Promise<{success: [any], failure: [any]}>{
+  public async scanACloudFormationTemplateAndReturAsArrays(template: string, type?: string, profileId?: string, accountId?: string): Promise<{success: any[], failure: any[]}>{
     const data = await this.scanACloudFormationTemplate(template, type, profileId, accountId);
-    const success = data.filter((entry: any) => entry.attributes.status === "SUCCESS");
-    const failure = data.filter((entry: any) => entry.attributes.status === "FAILURE");
-    return {
-      "success": success,
-      "failure": failure
-    };
+    try {
+      const success = data.filter((entry: any) => entry.attributes.status === "SUCCESS");
+      const failure = data.filter((entry: any) => entry.attributes.status === "FAILURE");
+      return {
+        success,
+        failure
+      };
+    } catch (error) {
+      return {
+        success: [],
+        failure: []
+      }
+    }
+    
   }
 
   // Users API
