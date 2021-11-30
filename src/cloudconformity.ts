@@ -13,7 +13,7 @@ export class CloudConformity {
 
   // Accounts API
   
-  public async createAnAccount(name: string, environment: string, roleArn: string, externalId: string, costPackage: boolean, hasRealTimeMonitoring: boolean){
+  public async createAnAWSAccount(name: string, environment: string, roleArn: string, externalId: string, costPackage: boolean, hasRealTimeMonitoring: boolean){
     const data = {
       "data": {
         "type": "account",
@@ -33,6 +33,45 @@ export class CloudConformity {
     }
     console.log(JSON.stringify(data, null, 2));
     const result = await this.ccRequest("POST", "accounts", data);
+    return result.id;
+  }
+
+  public async createAnAzureSubscription(name: string, environment: string, subscriptionId: string, activeDirectoryId: string){
+    const data = {
+      "data": {
+        "type": "account",
+        "attributes": {
+          "name": name,
+          "environment": environment,
+          "access": {
+            "subscriptionId": subscriptionId,
+            "activeDirectoryId": activeDirectoryId
+          }
+        }
+      }
+    }
+    console.log(JSON.stringify(data, null, 2));
+    const result = await this.ccRequest("POST", "accounts/azure", data);
+    return result.id;
+  }
+
+  public async createAGCPAccount(name: string, environment: string, projectId: string, projectName: string, serviceAccountUniqueId: string){
+    const data = {
+      "data": {
+        "type": "account",
+        "attributes": {
+          "name": name,
+          "environment": environment,
+          "access": {
+            "projectId": projectId,
+            "projectName": projectName,
+            "serviceAccountUniqueId": serviceAccountUniqueId
+          }
+        }
+      }
+    }
+    console.log(JSON.stringify(data, null, 2));
+    const result = await this.ccRequest("POST", "accounts/gcp", data);
     return result.id;
   }
 
@@ -92,19 +131,33 @@ export class CloudConformity {
     return await this.ccRequest("DELETE", "accounts/" + ccAccountId);
   };
 
+  // ExternalID API
+
   public async getOrganizationCloudConformityExternalId(): Promise<string> {
     const result = await this.ccRequest("GET", "organisation/external-id");
+    return result.id;
+  };
+
+  public async createAnExternalId(): Promise<string> {
+    const result = await this.ccRequest("POST", "organisation/external-id");
     return result.id;
   };
 
 
   // Template Scanner API
 
-  public async scanACloudFormationTemplate(template: string, type?: string, profileId?: string, accountId?: string) {
+  public async listTemplateScannerRules(type?: string) {
+    const basePath = "template-scanner/rules"
+    const path = type? `${basePath}?type=${type}` : basePath 
+    const result = await this.ccRequest("GET", path);
+    return result;
+  }
+
+  public async scanATemplate(template: string, type: string, profileId?: string, accountId?: string) {
     const data = {
       "data": {
         "attributes": {
-          "type": type? type : "cloudformation-template",
+          "type": type,
           ...profileId && { "profileId" : profileId },
           ...accountId && { "accountId" : accountId },
           "contents": template
@@ -114,14 +167,37 @@ export class CloudConformity {
     return (await this.ccRequest("POST", "template-scanner/scan", data));
   }
 
-  public async scanACloudFormationTemplateAndReturAsArrays(template: string, type?: string, profileId?: string, accountId?: string): Promise<{success: [any], failure: [any]}>{
-    const data = await this.scanACloudFormationTemplate(template, type, profileId, accountId);
-    const success = data.filter((entry: any) => entry.attributes.status === "SUCCESS");
-    const failure = data.filter((entry: any) => entry.attributes.status === "FAILURE");
-    return {
-      "success": success,
-      "failure": failure
-    };
+  public async scanACloudFormationTemplate(template: string, profileId?: string, accountId?: string) {
+    return (await this.scanATemplate(template, "cloudformation-template", profileId, accountId));
+  }
+
+  public async scanATerraformTemplate(template: string, profileId?: string, accountId?: string) {
+    return (await this.scanATemplate(template, "terraform-template", profileId, accountId));
+  }
+
+  public async scanATemplateAndReturnAsArrays(template: string, type: string, profileId?: string, accountId?: string): Promise<{success: any[], failure: any[]}>{
+    const data = await this.scanATemplate(template, type, profileId, accountId);
+    try {
+      const success = data.filter((entry: any) => entry.attributes.status === "SUCCESS");
+      const failure = data.filter((entry: any) => entry.attributes.status === "FAILURE");
+      return {
+        success,
+        failure
+      };
+    } catch (error) {
+      return {
+        success: [],
+        failure: []
+      }
+    }
+  }
+
+  public async scanACloudFormationTemplateAndReturAsArrays(template: string, profileId?: string, accountId?: string): Promise<{success: any[], failure: any[]}>{
+    return await this.scanATemplateAndReturnAsArrays(template, "cloudformation-template", profileId, accountId)
+  }
+
+  public async scanATerraformTemplateAndReturAsArrays(template: string, profileId?: string, accountId?: string): Promise<{success: any[], failure: any[]}>{
+    return await this.scanATemplateAndReturnAsArrays(template, "terraform-template", profileId, accountId)
   }
 
   // Users API
