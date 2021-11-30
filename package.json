@@ -1,6 +1,6 @@
 {
   "name": "cloud-conformity",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "description": "",
   "main": "dist/cloudconformity.js",
   "types": "dist/cloudconformity.d.ts",
@@ -27,7 +27,7 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "@types/node": "^13.13.1",
-    "axios": "^0.19.2"
+    "@types/node": "^16.11.11",
+    "axios": "^0.24.0"
   }
 }
