@@ -2,9 +2,11 @@
   "name": "cloud-conformity",
   "version": "1.2.1",
   "description": "",
-  "main": "cloudconformity.js",
-  "types": "cloudconformity.d.ts",
+  "main": "dist/cloudconformity.js",
+  "types": "dist/cloudconformity.d.ts",
+  "type": "commonjs",
   "scripts": {
+    "prepublish": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
@@ -13,19 +15,19 @@
     "prestart": "npm run build"
   },
   "keywords": [],
-  "author": "",
+  "author": "Raphael Bottino",
   "license": "ISC",
   "devDependencies": {
     "prettier": "^1.19.1",
-    "tslint": "^6.0.0",
+    "tslint": "^6.1.1",
     "tslint-config-prettier": "^1.18.0",
-    "typescript": "^3.7.5"
+    "typescript": "^3.8.3"
   },
   "files": [
-    "lib/**/*"
+    "dist/**/*"
   ],
   "dependencies": {
-    "@types/node": "^13.7.0",
+    "@types/node": "^16.11.11",
     "axios": "^0.24.0"
   }
 }

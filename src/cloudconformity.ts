@@ -12,6 +12,68 @@ export class CloudConformity {
   };
 
   // Accounts API
+  
+  public async createAnAWSAccount(name: string, environment: string, roleArn: string, externalId: string, costPackage: boolean, hasRealTimeMonitoring: boolean){
+    const data = {
+      "data": {
+        "type": "account",
+        "attributes": {
+          "name": name,
+          "environment": environment,
+          "access": {
+            "keys": {
+              "roleArn": roleArn,
+              "externalId": externalId
+            }
+          },
+          "costPackage": costPackage,
+          "hasRealTimeMonitoring": hasRealTimeMonitoring
+        }
+      }
+    }
+    console.log(JSON.stringify(data, null, 2));
+    const result = await this.ccRequest("POST", "accounts", data);
+    return result.id;
+  }
+
+  public async createAnAzureSubscription(name: string, environment: string, subscriptionId: string, activeDirectoryId: string){
+    const data = {
+      "data": {
+        "type": "account",
+        "attributes": {
+          "name": name,
+          "environment": environment,
+          "access": {
+            "subscriptionId": subscriptionId,
+            "activeDirectoryId": activeDirectoryId
+          }
+        }
+      }
+    }
+    console.log(JSON.stringify(data, null, 2));
+    const result = await this.ccRequest("POST", "accounts/azure", data);
+    return result.id;
+  }
+
+  public async createAGCPAccount(name: string, environment: string, projectId: string, projectName: string, serviceAccountUniqueId: string){
+    const data = {
+      "data": {
+        "type": "account",
+        "attributes": {
+          "name": name,
+          "environment": environment,
+          "access": {
+            "projectId": projectId,
+            "projectName": projectName,
+            "serviceAccountUniqueId": serviceAccountUniqueId
+          }
+        }
+      }
+    }
+    console.log(JSON.stringify(data, null, 2));
+    const result = await this.ccRequest("POST", "accounts/gcp", data);
+    return result.id;
+  }
 
   public async listAllAccounts(){
     return await this.ccRequest("GET", "accounts");
@@ -57,41 +119,101 @@ export class CloudConformity {
 
   /**
    * @TODO: Implement notes
+   * @param ccAccountId target account id
+   * @param ruleId target rule id
+   * @param notes optional parameter to get notes for the specified rule setting
    */
   public async getRuleSetting(ccAccountId: string, ruleId: string, notes?: boolean){
-    return await this.ccRequest("GET", "accounts/" + ccAccountId + "/settings/rules/" + ruleId);
+    return await this.ccRequest("GET", "accounts/" + ccAccountId + "settings/rules/" + ruleId);
   };
 
   public async deleteAccount(ccAccountId: string) {
     return await this.ccRequest("DELETE", "accounts/" + ccAccountId);
   };
 
-  public async getOrganizationCloudConformityExternalId() {
-    return await this.ccRequest("GET", "organisation/external-id");
+  // ExternalID API
+
+  public async getOrganizationCloudConformityExternalId(): Promise<string> {
+    const result = await this.ccRequest("GET", "organisation/external-id");
+    return result.id;
+  };
+
+  public async createAnExternalId(): Promise<string> {
+    const result = await this.ccRequest("POST", "organisation/external-id");
+    return result.id;
   };
 
 
   // Template Scanner API
 
-  public async scanACloudFormationTemplate(template:string, type?: string, profileId?: string, accountId?: string) {
+  public async listTemplateScannerRules(type?: string) {
+    const basePath = "template-scanner/rules"
+    const path = type? `${basePath}?type=${type}` : basePath 
+    const result = await this.ccRequest("GET", path);
+    return result;
+  }
+
+  public async scanATemplate(template: string, type: string, profileId?: string, accountId?: string) {
     const data = {
       "data": {
         "attributes": {
-          "type": type? type : "cloudformation-template",
+          "type": type,
           ...profileId && { "profileId" : profileId },
           ...accountId && { "accountId" : accountId },
           "contents": template
         }
       }
     };
-    return await this.ccRequest("POST", "template-scanner/scan", data)
+    return (await this.ccRequest("POST", "template-scanner/scan", data));
+  }
+
+  public async scanACloudFormationTemplate(template: string, profileId?: string, accountId?: string) {
+    return (await this.scanATemplate(template, "cloudformation-template", profileId, accountId));
+  }
+
+  public async scanATerraformTemplate(template: string, profileId?: string, accountId?: string) {
+    return (await this.scanATemplate(template, "terraform-template", profileId, accountId));
+  }
+
+  public async scanATemplateAndReturnAsArrays(template: string, type: string, profileId?: string, accountId?: string): Promise<{success: any[], failure: any[]}>{
+    const data = await this.scanATemplate(template, type, profileId, accountId);
+    try {
+      const success = data.filter((entry: any) => entry.attributes.status === "SUCCESS");
+      const failure = data.filter((entry: any) => entry.attributes.status === "FAILURE");
+      return {
+        success,
+        failure
+      };
+    } catch (error) {
+      return {
+        success: [],
+        failure: []
+      }
+    }
+  }
+
+  public async scanACloudFormationTemplateAndReturAsArrays(template: string, profileId?: string, accountId?: string): Promise<{success: any[], failure: any[]}>{
+    return await this.scanATemplateAndReturnAsArrays(template, "cloudformation-template", profileId, accountId)
+  }
+
+  public async scanATerraformTemplateAndReturAsArrays(template: string, profileId?: string, accountId?: string): Promise<{success: any[], failure: any[]}>{
+    return await this.scanATemplateAndReturnAsArrays(template, "terraform-template", profileId, accountId)
   }
 
   // Users API
 
+  public async getAllUsers() {
+    return await this.ccRequest("GET", "/users");
+  };
+
   public async getTheCurrentUser() {
     return await this.ccRequest("GET", "/users/whoami");
   };
+
+  public async getTheCurrentUserEmail(){
+    const user = await this.getTheCurrentUser();
+    return user.attributes.email;
+  }
 
   public async getUserDetails(userId: string) {
     return await this.ccRequest("GET", "/users/" + userId);
@@ -167,6 +289,104 @@ export class CloudConformity {
   public async deleteCommunicationSetting(communicationId: string){
     return await this.ccRequest("DELETE", "/settings/" + communicationId);
   };
+  
+  // Profiles API
+
+  /**
+   * Displays a list of profiles associated to an organisation.
+   */
+  public async listAllProfiles(){
+    return await this.ccRequest("GET", "profiles");
+  }
+
+  /**
+   * Allows you to get the details of the specified profile.
+   * @param profile The Cloud Conformity ID of the profile
+   */
+  public async getProfileAndRuleSettings(profile: string){
+    return await this.ccRequest("GET", "profiles/" + profile);
+  };
+
+  /**
+   * Save a new profile and a batch of configured rule settings upon profile creation
+   * @param profile a JSON object following the Profile GUI standard.
+   */
+  public async saveNewProfileAndRuleSettings(profile: any){
+    return await this.ccRequest("POST", "profiles", this.profileJsonToDataParameter(profile));
+  }
+
+  /**
+   * Converts a profile to the expected POST parameter. 
+   * @param profile a JSON object following the Profile GUI standard.
+   */
+  private profileJsonToDataParameter(profile: any){
+    let dataArray: { type: string; id: any; }[] = [];
+    let includedArray: { type: string; id: any; attributes: { extraSettings: any; enabled: any; exceptions: any; riskLevel: any; }; }[] = [];
+    profile.ruleSettings.map((rule: { id: any; enabled: any; exceptions: any; riskLevel: any; extraSettings?: any; }) => {
+      dataArray.push({
+        type: "rules",
+        id: rule.id
+      });
+      includedArray.push({
+        type: "rules",
+        id: rule.id,
+        attributes: {
+          enabled: rule.enabled,
+          exceptions: rule.exceptions,
+          riskLevel: rule.riskLevel,
+          ...(rule.extraSettings && {extraSettings: rule.extraSettings})
+        },
+      });
+    });
+    return {
+      included: includedArray,
+      data: {
+        type: "profiles",
+        attributes: {
+          name: profile.name,
+          description: profile.description
+        },
+        relationships: {
+          ruleSettings: {
+            "data": dataArray
+          }
+        }
+      }
+    };
+  }
+
+  /**
+   * Allows you to delete a specified profile and all affiliated rule settings.
+   * @param profileId The Cloud Conformity ID of the profile
+   */
+  public async deleteProfileAndRuleSettings(profileId: string){
+    return await this.ccRequest("DELETE", "profiles/" + profileId);
+  }
+
+  /**
+   * Allows you to apply profile and rule settings to a set of accounts under your organisation.
+   * @param profileId The Cloud Conformity ID of the profile
+   * @param mode Mode of how the profile will be applied to the accounts, i.e. "fill-gaps", "overwrite" or "replace".
+   * @param notes Log notes. This field is expected to be filled out, ideally with a reason for the profile being applied.
+   * @param accountIds An Array of account Id's that will be configured by the profile.
+   */
+  public async applyProfileToAccounts(profileId: string, mode: string, notes: string, accountIds: string[]){
+    const data = {
+      meta: {
+        accountIds: accountIds,
+        types: ["rule"],
+        mode: mode,
+        notes: notes,
+      }
+    };
+    return await this.ccRequest("POST", "profiles/" + profileId, data);
+  }
+
+  // // Checks API
+
+  public async listAllChecks(): Promise<string> {
+    return await this.ccRequest("GET", "checks")
+  };
 
 
   // Private helper functions
@@ -177,7 +397,7 @@ export class CloudConformity {
    * @param path path to be appended to CC endpoint
    * @param data Optional parameter with json data to be submitted with the request.
    */
-  private async ccRequest (method: AxiosRequestConfig["method"], path: string, data?: object): Promise<object>{
+  private async ccRequest (method: AxiosRequestConfig["method"], path: string, data?: object): Promise<any>{
     try {
       return this.parseAxiosOutput(await axios(this.generateRequest(method, path, data? data : undefined)));
     } catch (error) {
@@ -200,7 +420,7 @@ export class CloudConformity {
   };
 
   private parseAxiosOutput = (axiosOutput: any): object => {
-    return axiosOutput.data;
+    return axiosOutput.data.data;
   };
 
   private async parseAxiosError (error: AxiosResponse["request"]): Promise<object> {
